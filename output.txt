@@ -1,0 +1,9 @@
+Separátne metriky pre segment: Byty_Combined
+  Metriky pre 'Predaj' (is_for_sale == 1):
+    RMSE: 35736.0820
+    MAE: 22715.0391
+    R^2: 0.8250
+  Metriky pre 'Prenájom' (is_for_sale == 0):
+    RMSE: 1376.3871
+    MAE: 772.0231
+    R^2: -8.8542
