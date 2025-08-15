@@ -5,11 +5,10 @@ import subprocess
 from stem import Signal
 from stem.control import Controller
 
-
-#https://www.youtube.com/watch?v=Ep5ytx8ad04
+# HOW to download and configure tor expert bundle
+# https://www.youtube.com/watch?v=Ep5ytx8ad04
 # treba ist do TOR zlozky C:\programs\Tor Browser\Browser\TorBrowser\Tor, pustit hore cmd cez adresu a tam zadat 'tor' enter alebo 'tor | more'
 # potom spravca uloh a ci pod CMD procesom bezi tor.exe
-
 ## ako SPUSTIS CELE ROTOVANIE TOR IP A STIAHNUT TOR VSTKO TOP VIDEO NAVOD
 ## https://www.youtube.com/watch?v=wJfa0qEzpJc&t=638s
 ## tor je v C:\Users\adam\AppData\Roaming\tor\tor
@@ -20,7 +19,6 @@ from stem.control import Controller
 # ------------------------------------------------------------------
 TOR_EXE   = r"C:\Users\Adam\AppData\Roaming\tor\tor\tor.exe"
 TORRC     = r"C:\Users\Adam\AppData\Roaming\tor\torrc"
-
 
 # ------------------------------------------------------------------
 # 2) Start Tor if it is not running yet
@@ -71,7 +69,6 @@ def check_website_availability(url):
         print(f"Success! Status code: {res.status_code}")
     except requests.RequestException as e:
         print(f"Failed to reach the website: {e}")
-
 
 # ------------------------------------------------------------------
 # 4) Main flow
