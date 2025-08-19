@@ -34,15 +34,11 @@ log.get_logger().propagate = False  # Prevent stem from propagating logs
 
 def generate_user_agent():
     # Definujeme typy prehliadačov a operačných systémov, ktoré chceme zahrnúť
-    software_names = [SoftwareName.CHROME.value, SoftwareName.FIREFOX.value, 
-                     SoftwareName.EDGE.value, SoftwareName.SAFARI.value]
-    operating_systems = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value,
-                        OperatingSystem.MAC.value]
+    software_names      = [SoftwareName.CHROME.value, SoftwareName.FIREFOX.value, SoftwareName.EDGE.value, SoftwareName.SAFARI.value]
+    operating_systems   = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value, OperatingSystem.MAC.value]
     
     # Inicializujeme generátor
-    user_agent_rotator = UserAgent(software_names=software_names,
-                                   operating_systems=operating_systems,
-                                   limit=100)
+    user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100)
     
     # Vyberieme náhodný user agent
     return user_agent_rotator.get_random_user_agent()
@@ -166,59 +162,6 @@ def scrape_propertyV5(url):
         handle_error(f'Error scraping property at {url}: {e}')
         return {}
 
-# added attempts the request multiple times with increasing delays between each retry
-def scrape_page6(page_url, days_back=None, date_type='published'):
-    max_retries = 9  # Maximum number of retries
-    backoff_factor = 2  # Delay factor between retries
-    retry_delay = 2  # Initial delay between retries in seconds
-
-    for attempt in range(max_retries):
-        try:
-            headers = {'User-Agent': generate_user_agent()}
-            renew_tor_identity()  # Rotate Tor identity before each request
-            response = requests.get(page_url, headers=headers, timeout=10)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            offers = soup.select('.offer-item-in')
-
-            real_estate_urls = []
-            for offer in offers:
-                link = offer.select_one('.offer-body a')['href']
-                full_url = urljoin(page_url, link)
-
-                if days_back is not None:
-                    offer_dates = offer.select('.offer-dates .offer-date')
-                    within_date_range = False
-
-                    for date in offer_dates:
-                        date_text = date.get_text(strip=True)
-                        try:
-                            date_value = datetime.strptime(date_text.split(': ')[1], '%d.%m.%Y').date()
-                            if (date_type == 'published' and 'Publikované:' in date_text) or (date_type == 'updated' and 'Aktualizované:' in date_text):
-                                if (datetime.now().date() - date_value).days <= days_back:
-                                    within_date_range = True
-                                    break
-                        except ValueError:
-                            continue
-
-                    if within_date_range:
-                        real_estate_urls.append(full_url)
-                else:
-                    real_estate_urls.append(full_url)
-
-            return real_estate_urls
-
-        except requests.RequestException as e:
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay)
-                retry_delay *= backoff_factor
-                continue
-            else:
-                handle_error(f'Error occurred while scraping page {page_url} after {max_retries} attempts: {e}', exception=True)
-                return []
-        except Exception as e:
-            handle_error(f'An unexpected error occurred while scraping page {page_url}: {e}', exception=True)
-            return []
-
 # added checks if the page is valid, if not return empty list to signal end of valid pages
 def scrape_page7(page_url, days_back=None, date_type='published'):
     max_retries = 9  # Maximum number of retries
@@ -287,83 +230,7 @@ def scrape_page7(page_url, days_back=None, date_type='published'):
         except Exception as e:
             handle_error(f'An unexpected error occurred while scraping page {page_url}: {e}', exception=True)
             return []
-
-# Main function to initiate the scraping process,no paraler and using older scprape_page6 function
-def main3(scrape_mode='page', max_pages=10, days_back=None, date_type='published', save_mode='csv'):
-    if scrape_mode == 'page':
-        urls = [
-            'https://www.reality.sk/zilinsky-kraj/?order=created_date-newest', 
-        ]
-    elif scrape_mode == 'date':
-        if date_type == 'published':
-            urls = [
-            'https://www.reality.sk/zilinsky-kraj/?order=created_date-newest',
-            'https://www.reality.sk/trenciansky-kraj/?order=created_date-newest',
-            'https://www.reality.sk/banskobystricky-kraj/?order=created_date-newest',
-            'https://www.reality.sk/nitriansky-kraj/?order=created_date-newest',
-            'https://www.reality.sk/bratislavsky-kraj/?order=created_date-newest',
-            'https://www.reality.sk/trnavsky-kraj/?order=created_date-newest',
-            'https://www.reality.sk/presovsky-kraj/?order=created_date-newest',
-            'https://www.reality.sk/kosicky-kraj/?order=created_date-newest',
-            ]
-        elif date_type == 'updated':
-            urls = [
-            'https://www.reality.sk/zilinsky-kraj/?order=updated_date-newest',
-            'https://www.reality.sk/trenciansky-kraj/?order=updated_date-newest',
-            'https://www.reality.sk/banskobystricky-kraj/?order=updated_date-newest',
-            'https://www.reality.sk/nitriansky-kraj/?order=updated_date-newest',
-            'https://www.reality.sk/bratislavsky-kraj/?order=updated_date-newest',
-            'https://www.reality.sk/trnavsky-kraj/?order=updated_date-newest',
-            'https://www.reality.sk/presovsky-kraj/?order=updated_date-newest',
-            'https://www.reality.sk/kosicky-kraj/?order=updated_date-newest'
-            ]
-  
-    output_directory = 'nehnutelnosti_data'
-
-    for url in urls:
-        base_url = url + '&page={}'
-        page_number = 1
-        all_urls = []
-
-        try:
-            if scrape_mode == 'page':
-                while page_number <= max_pages:
-                    page_url = base_url.format(page_number)
-                    page_urls = scrape_page6(page_url)
-                    if not page_urls:
-                        break
-
-                    all_urls.extend(page_urls)
-                    page_number += 1
-
-            elif scrape_mode == 'date':
-                page_url = base_url.format(page_number)
-                while True:
-                    page_urls = scrape_page6(page_url, days_back, date_type)
-                    if not page_urls:
-                        break
-
-                    all_urls.extend(page_urls)
-                    page_url = base_url.format(page_number)
-                    page_number += 1
-
-        except Exception as e:
-            handle_error(f'An error occurred: {e}')
-
-        print(f'Scraping page {date_type}: {page_url}')
-        # Process all collected URLs for the current site
-        all_nehnutelnosti_data = []
-        if all_urls:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=24) as executor:
-                all_nehnutelnosti_data = list(tqdm(executor.map(scrape_propertyV5, all_urls), total=len(all_urls)))
-
-        # Save the scraped data for the current site
-        if save_mode == 'csv':
-            filename = f'Nehnutelnosti_{get_region_from_url(url)}_{get_current_date()}.csv'
-            save_data_to_csv6(all_nehnutelnosti_data, filename, output_directory)
-        elif save_mode == 'db':
-            save_data_to_db(all_nehnutelnosti_data) 
-            
+         
 def main4(scrape_mode='page', max_pages=10, days_back=None, date_type='published', save_mode='csv'):
     
     if scrape_mode == 'page':
